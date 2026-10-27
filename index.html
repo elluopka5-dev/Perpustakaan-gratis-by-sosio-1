@@ -306,6 +306,31 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .pfc{padding:6px 18px 40px}.pfc label{display:block;font-size:.85rem;opacity:.85;margin-bottom:12px}
 .pfa{display:flex;flex-direction:column;align-items:center;gap:10px;margin:8px 0 18px}
 .pfv{padding:10px 14px;border-radius:12px;background:rgba(200,147,43,.15);margin-bottom:14px;font-size:.9rem}.pfv.ok{background:rgba(47,143,107,.2)}
+
+/* ===== VIDEO ALKITAB + PENGUMUMAN (dikelola dari admin) ===== */
+[data-off]{display:none!important}
+#video{margin:10px 0 46px}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px;margin-top:16px}
+.vc{background:var(--card);border:1px solid var(--bd);border-radius:20px;overflow:hidden;box-shadow:0 6px 18px rgba(20,24,40,.10);cursor:pointer;text-align:left;font:inherit;color:var(--ink);padding:0;transition:transform .2s,box-shadow .2s;animation:vcIn .5s both}
+.vc:hover{transform:translateY(-4px)}.vc:active{transform:scale(.97)}
+.vth{position:relative;aspect-ratio:16/9;background:#000 center/cover no-repeat}
+.vth::after{content:"▶";position:absolute;inset:0;margin:auto;width:54px;height:54px;border-radius:50%;background:rgba(255,0,0,.88);color:#fff;display:grid;place-items:center;font-size:1.3rem;padding-left:4px;box-shadow:0 4px 14px rgba(0,0,0,.4);transition:transform .2s}
+.vc:hover .vth::after{transform:scale(1.12)}
+.vtt{padding:12px 14px 14px}.vtt b{display:block;line-height:1.3}.vtt small{display:block;opacity:.7;margin-top:4px;line-height:1.4}
+@keyframes vcIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+#vm{position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;padding:14px;flex-direction:column;gap:12px}
+#vm.show{display:flex;animation:vmIn .25s}
+@keyframes vmIn{from{opacity:0}to{opacity:1}}
+.vbox{width:min(900px,100%);aspect-ratio:16/9;background:#000;border-radius:16px;overflow:hidden}
+.vbox iframe{width:100%;height:100%;border:0}
+.vbar{width:min(900px,100%);display:flex;gap:10px;align-items:center;color:#fff}
+.vbar b{flex:1;min-width:0}
+.vbar a,.vbar button{font:inherit;font-weight:600;border:0;border-radius:99px;padding:8px 16px;cursor:pointer;text-decoration:none;background:#fff;color:#1d1b3a}
+#pbn{margin:10px 0 0;padding:12px 16px;border-radius:16px;background:var(--yellow);color:#1d1b3a;font-weight:600;border:1px solid var(--bd);animation:pbnIn .5s}
+@keyframes pbnIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+#pmt{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;background:linear-gradient(160deg,#ffd23f,#ff6b9d 55%,#8b5cf6);color:#1d1b3a}
+#pmt.show{display:flex}#pmt h2{font-size:2rem}#pmt p{max-width:420px;font-size:1.1rem}
+@media (prefers-reduced-motion:reduce){.vc,#pbn,#vm.show{animation:none}}
 </style>
 </head>
 <body>
@@ -377,6 +402,12 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 <div class="grid" id="grid"></div>
 </section>
 
+<section id="video">
+<div class="kick" style="color:var(--purple)">🎬 NONTON</div><h2>Video Alkitab</h2>
+<div class="hand" style="font-size:1.4rem">ketuk video buat nonton langsung di sini</div>
+<div class="vgrid" id="vgrid"></div>
+</section>
+
 <section id="komentar" style="padding-bottom:50px">
 <h2>💬 Kolam Komentar</h2>
 <div class="hand" style="font-size:1.4rem">bagikan pesan dan pendapat kamu dari cerita yang dibaca!</div>
@@ -386,6 +417,8 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 </section>
 </div>
 
+<div id="vm"><div class="vbox" id="vbox"></div><div class="vbar"><b id="vtl"></b><a id="vyt" target="_blank" rel="noopener">Buka di YouTube</a><button id="vx">Tutup ✕</button></div></div>
+<div id="pmt"><div><div style="font-size:4rem">🛠️</div><h2>Sedang dirapikan</h2><p id="pmm">Perpustakaan sedang diperbarui. Coba lagi sebentar ya.</p></div></div>
 <footer>
 <div class="sl big" style="width:56px;height:56px;margin-bottom:10px"></div>
 <div class="ft1">Perpustakaan Online PAC</div>
@@ -1118,6 +1151,46 @@ const FBCONF={apiKey:"AIzaSyAhUiU9R4XRC7PnsQWpCfqNYuxTii2XEc8",authDomain:"perpu
   const live=(col,arr,fn)=>db.collection(col).onSnapshot(sn=>{for(let i=arr.length-1;i>=0;i--)if(arr[i]._fb)arr.splice(i,1);sn.docs.forEach(d=>arr.push({...d.data(),_fb:1}));fn()},()=>{});
   live("renungan",renungan,showRen);live("literasi",literasi,showLit);
   db.collection("cerita").onSnapshot(sn=>PACApply(sn.docs.map(d=>({id:d.id,...d.data()}))),()=>{});
+
+  // ===== VIDEO ALKITAB (real-time dari admin) =====
+  {const esc=t=>String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+   const vm=document.getElementById("vm"),vg=document.getElementById("vgrid"),vs=document.getElementById("video");
+   const closeV=()=>{vm.classList.remove("show");document.getElementById("vbox").innerHTML="";document.body.style.overflow=""};
+   const openV=v=>{document.getElementById("vtl").textContent=v.judul||"";document.getElementById("vyt").href="https://youtu.be/"+v.ytid;
+    document.getElementById("vbox").innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(v.ytid)+'?autoplay=1&rel=0&playsinline=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+    vm.classList.add("show");document.body.style.overflow="hidden";history.pushState({ov:"vm"},"")};
+   document.getElementById("vx").onclick=closeV;vm.onclick=e=>{if(e.target==vm)closeV()};
+   addEventListener("popstate",()=>{if(vm.classList.contains("show"))closeV()});
+   let vl=[];
+   vg.onclick=e=>{const b=e.target.closest("[data-vi]");if(b)openV(vl[+b.dataset.vi])};
+   db.collection("video").onSnapshot(sn=>{
+    vl=sn.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.ytid).sort((a,b)=>(b.updated&&b.updated.seconds||0)-(a.updated&&a.updated.seconds||0));
+    vg.innerHTML=vl.map((v,i)=>'<button class="vc" data-vi="'+i+'" style="animation-delay:'+Math.min(i,8)*70+'ms"><div class="vth" style="background-image:url(https://i.ytimg.com/vi/'+encodeURIComponent(v.ytid)+'/hqdefault.jpg)"></div><div class="vtt"><b>'+esc(v.judul)+'</b>'+(v.deskripsi?'<small>'+esc(v.deskripsi)+'</small>':'')+'</div></button>').join("");
+    vs.style.display=vl.length?"":"none"},()=>{vs.style.display="none"});
+  }
+  // ===== PENGATURAN APLIKASI (real-time dari admin) =====
+  {const $q=s=>document.querySelector(s),root=document.documentElement;
+   const keep=(el,k)=>{if(el&&el.dataset[k]==null)el.dataset[k]=el.innerHTML};
+   const setTxt=(el,k,v,asText)=>{if(!el)return;keep(el,k);if(v){if(asText)el.textContent=v;else el.innerHTML=v}else el.innerHTML=el.dataset[k]};
+   db.collection("pengaturan").doc("umum").onSnapshot(d=>{const c=d.exists?d.data():{};
+    // pengumuman
+    let b=document.getElementById("pbn");
+    if(c.pengumumanOn&&c.pengumuman){if(!b){b=document.createElement("div");b.id="pbn";const w=$q(".wrap");w.insertBefore(b,w.firstChild)}b.textContent="📢 "+c.pengumuman}else if(b)b.remove();
+    // mode pemeliharaan
+    const pm=document.getElementById("pmt");pm.classList.toggle("show",!!c.pemeliharaan);
+    if(c.pemeliharaan){document.getElementById("pmm").textContent=c.pesanPemeliharaan||"Perpustakaan sedang diperbarui. Coba lagi sebentar ya."}
+    // teks beranda
+    setTxt($q("header.hero .hand"),"o",c.sapaan,1);
+    setTxt($q("header.hero h1"),"o",c.judulHero&&esc2(c.judulHero));
+    setTxt($q("header.hero .sub"),"o",c.deskHero,1);
+    setTxt($q(".ft3"),"o",c.footer,1);
+    // bagian yang ditampilkan
+    [["renungan","tampilRenungan"],["literasi","tampilLiterasi"],["video","tampilVideo"],["komentar","tampilKomentar"]].forEach(([id,k])=>{const e=document.getElementById(id);if(e)e.toggleAttribute("data-off",c[k]===false)});
+    // warna aksen
+    if(/^#[0-9a-f]{3,8}$/i.test(c.aksen||""))root.style.setProperty("--pink",c.aksen);else root.style.removeProperty("--pink");
+   },()=>{});
+   function esc2(t){return String(t).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+  }
 })();
 </script>
 </body>
